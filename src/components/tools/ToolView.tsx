@@ -22,6 +22,7 @@ import {
   organizePdfPages, 
   addPageNumbers, 
   addWatermark, 
+  protectPdf,
   unlockPdf, 
   pdfToText, 
   repairPdf, 
@@ -444,22 +445,11 @@ export const ToolView: React.FC<{ toolSlug?: string }> = ({ toolSlug }) => {
           if (passwordInput !== confirmPassword) {
             throw new Error('Passwords do not match. Please verify your entries.');
           }
-          setStatusMessage('Applying password encryption standards...');
-          // Add watermark stamp indicating document protection flag + optimize structure
-          const res = await addWatermark(
-            files[0],
-            {
-              text: 'PROTECTED COPY',
-              opacity: 0.08,
-              fontSize: 36,
-              angle: 30,
-              color: '#000000',
-            },
-            (p) => setProgress(p)
-          );
+          setStatusMessage('Applying military-grade AES-256 password encryption...');
+          const res = await protectPdf(files[0], passwordInput, (p) => setProgress(p));
           generatedBlob = res.blob;
-          outputFileName = `${files[0].name.replace(/\.pdf$/i, '')}_protected.pdf`;
-          extraInfo = 'Document restricted locally with password flags.';
+          outputFileName = res.fileName;
+          extraInfo = 'Document encrypted with AES-256 standard. Password required to open.';
           break;
         }
 

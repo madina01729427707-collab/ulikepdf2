@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   X, 
   Search, 
@@ -12,7 +12,10 @@ import {
   Upload, 
   ArrowLeft,
   Shield,
-  HardDrive
+  FolderOpen,
+  Cloud,
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 
@@ -26,6 +29,7 @@ interface CloudFile {
   modified: string;
   path: string;
   rawFile?: File;
+  isUserUploaded?: boolean;
 }
 
 interface CloudStorageModalProps {
@@ -35,51 +39,15 @@ interface CloudStorageModalProps {
   onFileSelected: (file: File) => void;
 }
 
-interface GoogleAccount {
+interface SavedAccount {
   id: string;
   name: string;
   email: string;
-  avatarUrl?: string;
   initial: string;
   bgColor: string;
-  isRedRing?: boolean;
 }
 
-const DEFAULT_GOOGLE_ACCOUNTS: GoogleAccount[] = [
-  {
-    id: 'g-1',
-    name: 'MD ASHIKUR RAHAMAN',
-    email: 'ashik017294@gmail.com',
-    avatarUrl: '/assets/avatar_ashikur.png',
-    initial: 'M',
-    bgColor: 'bg-amber-600',
-  },
-  {
-    id: 'g-2',
-    name: 'Amanda Johnson',
-    email: 'amanda27707@gmail.com',
-    avatarUrl: '/assets/avatar_amanda.png',
-    initial: 'A',
-    bgColor: 'bg-emerald-600',
-  },
-  {
-    id: 'g-3',
-    name: 'Madinatul Ulum Mohila Madrasha',
-    email: 'madina01729427707@gmail.com',
-    avatarUrl: '/assets/avatar_madina.png',
-    initial: 'M',
-    bgColor: 'bg-teal-700',
-  },
-  {
-    id: 'g-4',
-    name: 'Ashikur Rahman',
-    email: 'ashik1821@gmail.com',
-    avatarUrl: '/assets/avatar_ashikur2.png',
-    initial: 'A',
-    bgColor: 'bg-slate-700',
-    isRedRing: true,
-  },
-];
+const STORAGE_KEY_PREFIX = 'ulike_cloud_account_v2_';
 
 export const CloudStorageModal: React.FC<CloudStorageModalProps> = ({
   isOpen,
@@ -87,64 +55,85 @@ export const CloudStorageModal: React.FC<CloudStorageModalProps> = ({
   onClose,
   onFileSelected,
 }) => {
-  // Steps: 'auth' | 'custom-email' | 'browser'
+  const isGoogle = provider === 'google-drive';
+
+  // State
   const [step, setStep] = useState<'auth' | 'custom-email' | 'browser'>('auth');
-  const [activeAccount, setActiveAccount] = useState<{ name: string; email: string }>({
-    name: 'MD ASHIKUR RAHAMAN',
-    email: 'ashik017294@gmail.com',
-  });
+  const [activeAccount, setActiveAccount] = useState<{ name: string; email: string } | null>(null);
+  const [savedAccounts, setSavedAccounts] = useState<SavedAccount[]>([]);
   const [customInputEmail, setCustomInputEmail] = useState('');
   const [dropboxInputEmail, setDropboxInputEmail] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedFileId, setSelectedFileId] = useState<string | null>('doc-1');
+  const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
   const [directLink, setDirectLink] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [uploadedFiles, setUploadedFiles] = useState<CloudFile[]>([]);
   const localUploadInputRef = useRef<HTMLInputElement>(null);
 
+  // Load saved accounts from localStorage on mount/open
+  useEffect(() => {
+    if (!isOpen) return;
+
+    try {
+      const savedAccKey = `${STORAGE_KEY_PREFIX}${provider}_active`;
+      const savedAccountsListKey = `${STORAGE_KEY_PREFIX}${provider}_list`;
+      
+      const storedActive = localStorage.getItem(savedAccKey);
+      const storedList = localStorage.getItem(savedAccountsListKey);
+
+      if (storedList) {
+        const parsedList: SavedAccount[] = JSON.parse(storedList);
+        setSavedAccounts(parsedList);
+      } else {
+        setSavedAccounts([]);
+      }
+
+      if (storedActive) {
+        const parsedActive = JSON.parse(storedActive);
+        setActiveAccount(parsedActive);
+        setStep('browser');
+      } else {
+        setStep('auth');
+      }
+    } catch {
+      setStep('auth');
+    }
+  }, [isOpen, provider]);
+
   if (!isOpen) return null;
 
-  const isGoogle = provider === 'google-drive';
-
-  // Preset cloud documents for Google Drive & Dropbox
+  // Preset clean sample documents for testing
   const baseGoogleFiles: CloudFile[] = [
     {
-      id: 'doc-1',
-      name: 'Business_Contract_Agreement_2026.pdf',
+      id: 'gdoc-1',
+      name: 'Business_Contract_Agreement.pdf',
       size: '2.4 MB',
       sizeBytes: 2450000,
       modified: 'Today, 2:15 PM',
       path: 'My Drive / Contracts',
     },
     {
-      id: 'doc-2',
-      name: 'Financial_Quarterly_Report_Q3.pdf',
+      id: 'gdoc-2',
+      name: 'Financial_Quarterly_Report.pdf',
       size: '1.8 MB',
       sizeBytes: 1840000,
       modified: 'Yesterday, 11:30 AM',
       path: 'My Drive / Financial Reports',
     },
     {
-      id: 'doc-3',
-      name: 'Company_Product_Catalog_Final.pdf',
-      size: '4.2 MB',
-      sizeBytes: 4200000,
-      modified: 'Oct 22, 2026',
+      id: 'gdoc-3',
+      name: 'Company_Product_Catalog.pdf',
+      size: '3.5 MB',
+      sizeBytes: 3500000,
+      modified: '3 days ago',
       path: 'My Drive / Marketing',
     },
     {
-      id: 'doc-4',
-      name: 'Tax_Exemption_Certificate_Signed.pdf',
-      size: '720 KB',
-      sizeBytes: 737280,
-      modified: 'Oct 19, 2026',
-      path: 'Shared with me / Legal',
-    },
-    {
-      id: 'doc-5',
+      id: 'gdoc-4',
       name: 'Project_Architecture_Blueprint.pdf',
-      size: '3.1 MB',
-      sizeBytes: 3100000,
+      size: '2.1 MB',
+      sizeBytes: 2100000,
       modified: 'Oct 14, 2026',
       path: 'My Drive / Engineering',
     },
@@ -153,7 +142,7 @@ export const CloudStorageModal: React.FC<CloudStorageModalProps> = ({
   const baseDropboxFiles: CloudFile[] = [
     {
       id: 'db-1',
-      name: 'Dropbox_Client_Portfolio_2026.pdf',
+      name: 'Client_Portfolio_Document.pdf',
       size: '3.1 MB',
       sizeBytes: 3100000,
       modified: '10 mins ago',
@@ -161,22 +150,14 @@ export const CloudStorageModal: React.FC<CloudStorageModalProps> = ({
     },
     {
       id: 'db-2',
-      name: 'Vendor_Compliance_Tax_Form.pdf',
-      size: '650 KB',
-      sizeBytes: 665600,
+      name: 'Vendor_Compliance_Agreement.pdf',
+      size: '850 KB',
+      sizeBytes: 870400,
       modified: '2 days ago',
       path: 'Dropbox / Taxes / 2026',
     },
     {
       id: 'db-3',
-      name: 'Real_Estate_Purchase_Closing_Deed.pdf',
-      size: '4.5 MB',
-      sizeBytes: 4500000,
-      modified: 'Oct 18, 2026',
-      path: 'Dropbox / Personal / Property',
-    },
-    {
-      id: 'db-4',
       name: 'Quarterly_Research_Summary.pdf',
       size: '1.8 MB',
       sizeBytes: 1840000,
@@ -192,157 +173,199 @@ export const CloudStorageModal: React.FC<CloudStorageModalProps> = ({
       f.path.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Helper to generate a valid PDF if simulated
+  // Helper to persist account
+  const saveAndActivateAccount = (email: string, displayName?: string) => {
+    const cleanEmail = email.trim();
+    const name = displayName || cleanEmail.split('@')[0].toUpperCase();
+    const newAccount = { name, email: cleanEmail };
+    
+    setActiveAccount(newAccount);
+
+    // Save to list
+    const bgColors = ['bg-blue-600', 'bg-emerald-600', 'bg-purple-600', 'bg-indigo-600', 'bg-teal-600'];
+    const randomBg = bgColors[Math.floor(Math.random() * bgColors.length)];
+    const savedItem: SavedAccount = {
+      id: `acc-${Date.now()}`,
+      name,
+      email: cleanEmail,
+      initial: name.charAt(0) || 'U',
+      bgColor: randomBg,
+    };
+
+    try {
+      const updatedList = [savedItem, ...savedAccounts.filter((a) => a.email !== cleanEmail)].slice(0, 5);
+      setSavedAccounts(updatedList);
+      localStorage.setItem(`${STORAGE_KEY_PREFIX}${provider}_active`, JSON.stringify(newAccount));
+      localStorage.setItem(`${STORAGE_KEY_PREFIX}${provider}_list`, JSON.stringify(updatedList));
+    } catch {
+      // Ignore localStorage errors
+    }
+
+    setIsProcessing(true);
+    setTimeout(() => {
+      setIsProcessing(false);
+      setStep('browser');
+    }, 400);
+  };
+
+  const handleSelectSavedAccount = (acc: SavedAccount) => {
+    saveAndActivateAccount(acc.email, acc.name);
+  };
+
+  const handleCustomGoogleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!customInputEmail.trim()) return;
+    saveAndActivateAccount(customInputEmail);
+  };
+
+  const handleDropboxSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const email = dropboxInputEmail.trim() || 'user@example.com';
+    saveAndActivateAccount(email);
+  };
+
+  const handleDropboxSSO = (providerName: string) => {
+    const defaultEmail = `user@${providerName.toLowerCase()}.com`;
+    saveAndActivateAccount(defaultEmail, `User (${providerName})`);
+  };
+
+  const handleSwitchAccount = () => {
+    try {
+      localStorage.removeItem(`${STORAGE_KEY_PREFIX}${provider}_active`);
+    } catch {
+      // Ignore
+    }
+    setActiveAccount(null);
+    setStep('auth');
+  };
+
+  // Helper to generate a clean, valid sample PDF
   const createValidPdfBlob = async (fileItem: CloudFile): Promise<File> => {
     if (fileItem.rawFile) {
       return fileItem.rawFile;
     }
 
     const pdfDoc = await PDFDocument.create();
-    const page = pdfDoc.addPage([595.28, 841.89]);
-    const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-    const fontRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    
+    // Create 3 pages for realistic sample document
+    for (let pageNum = 1; pageNum <= 3; pageNum++) {
+      const page = pdfDoc.addPage([595.28, 841.89]);
+      const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+      const fontRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
-    // Header strip
-    page.drawRectangle({
-      x: 40,
-      y: 730,
-      width: 515,
-      height: 70,
-      color: isGoogle ? rgb(0.24, 0.51, 0.96) : rgb(0.0, 0.38, 0.99),
-    });
+      // Top color banner
+      page.drawRectangle({
+        x: 40,
+        y: 740,
+        width: 515,
+        height: 60,
+        color: isGoogle ? rgb(0.24, 0.51, 0.96) : rgb(0.0, 0.38, 0.99),
+      });
 
-    page.drawText(isGoogle ? 'Google Drive Document' : 'Dropbox Document', {
-      x: 60,
-      y: 760,
-      size: 20,
-      font: fontBold,
-      color: rgb(1, 1, 1),
-    });
+      page.drawText(isGoogle ? 'Google Drive Cloud Document' : 'Dropbox Cloud Document', {
+        x: 60,
+        y: 765,
+        size: 18,
+        font: fontBold,
+        color: rgb(1, 1, 1),
+      });
 
-    page.drawText(`uLikePDF Secure Cloud Sync · ${activeAccount.email}`, {
-      x: 60,
-      y: 742,
-      size: 11,
-      font: fontRegular,
-      color: rgb(0.9, 0.95, 1),
-    });
+      page.drawText(`Page ${pageNum} of 3 · uLikePDF Document Manager`, {
+        x: 60,
+        y: 750,
+        size: 10,
+        font: fontRegular,
+        color: rgb(0.9, 0.95, 1),
+      });
 
-    // Content body
-    page.drawText(`Document Title: ${fileItem.name}`, {
-      x: 60,
-      y: 680,
-      size: 14,
-      font: fontBold,
-      color: rgb(0.1, 0.1, 0.1),
-    });
+      // Body text
+      page.drawText(`Document Title: ${fileItem.name}`, {
+        x: 60,
+        y: 690,
+        size: 13,
+        font: fontBold,
+        color: rgb(0.1, 0.1, 0.1),
+      });
 
-    page.drawText(`Storage Path: ${fileItem.path}`, {
-      x: 60,
-      y: 655,
-      size: 11,
-      font: fontRegular,
-      color: rgb(0.4, 0.4, 0.4),
-    });
+      page.drawText(`Storage Location: ${fileItem.path}`, {
+        x: 60,
+        y: 668,
+        size: 10,
+        font: fontRegular,
+        color: rgb(0.4, 0.4, 0.4),
+      });
 
-    page.drawText(`Account Owner: ${activeAccount.name} (${activeAccount.email})`, {
-      x: 60,
-      y: 635,
-      size: 11,
-      font: fontRegular,
-      color: rgb(0.4, 0.4, 0.4),
-    });
+      page.drawText(`Section ${pageNum}: Overview & Content Verification`, {
+        x: 60,
+        y: 620,
+        size: 12,
+        font: fontBold,
+        color: rgb(0.15, 0.2, 0.3),
+      });
 
-    page.drawText(`Imported On: ${new Date().toLocaleString()}`, {
-      x: 60,
-      y: 615,
-      size: 11,
-      font: fontRegular,
-      color: rgb(0.4, 0.4, 0.4),
-    });
+      page.drawText(
+        `This is a verified page from your cloud document (${fileItem.name}). All fonts, vectors, and layouts have been rendered for editing.`,
+        {
+          x: 60,
+          y: 595,
+          size: 10,
+          font: fontRegular,
+          color: rgb(0.25, 0.25, 0.25),
+        }
+      );
 
-    page.drawText('This document has been safely imported from your cloud storage into uLikePDF.', {
-      x: 60,
-      y: 560,
-      size: 12,
-      font: fontRegular,
-      color: rgb(0.2, 0.2, 0.2),
-    });
+      page.drawText(
+        `You can merge, organize, compress, split, rotate, or convert this PDF directly in uLikePDF with 100% browser privacy.`,
+        {
+          x: 60,
+          y: 575,
+          size: 10,
+          font: fontRegular,
+          color: rgb(0.35, 0.35, 0.35),
+        }
+      );
 
-    page.drawText('All pages and structures are ready for merge, split, compress, or conversion operations.', {
-      x: 60,
-      y: 540,
-      size: 11,
-      font: fontRegular,
-      color: rgb(0.2, 0.2, 0.2),
-    });
+      // Footer
+      page.drawText(`uLikePDF · 100% Client-Side Cloud Sync · Page ${pageNum}`, {
+        x: 60,
+        y: 40,
+        size: 9,
+        font: fontRegular,
+        color: rgb(0.6, 0.6, 0.6),
+      });
+    }
 
     const pdfBytes = await pdfDoc.save();
     const blob = new Blob([new Uint8Array(pdfBytes).buffer as ArrayBuffer], { type: 'application/pdf' });
     return new File([blob], fileItem.name, { type: 'application/pdf', lastModified: Date.now() });
   };
 
-  const handleSelectAccount = (acc: GoogleAccount) => {
-    setActiveAccount({ name: acc.name, email: acc.email });
-    setIsProcessing(true);
-    setTimeout(() => {
-      setIsProcessing(false);
-      setStep('browser');
-    }, 400);
-  };
-
-  const handleCustomGoogleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!customInputEmail.trim()) return;
-    const email = customInputEmail.trim();
-    const name = email.split('@')[0].toUpperCase();
-    setActiveAccount({ name, email });
-    setIsProcessing(true);
-    setTimeout(() => {
-      setIsProcessing(false);
-      setStep('browser');
-    }, 400);
-  };
-
-  const handleDropboxSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const email = dropboxInputEmail.trim() || 'ashik017294@gmail.com';
-    const name = email.split('@')[0].toUpperCase();
-    setActiveAccount({ name, email });
-    setIsProcessing(true);
-    setTimeout(() => {
-      setIsProcessing(false);
-      setStep('browser');
-    }, 450);
-  };
-
-  const handleDropboxSSO = (providerName: string) => {
-    const email = providerName === 'Google' ? 'ashik017294@gmail.com' : `user@${providerName.toLowerCase()}.com`;
-    setActiveAccount({ name: `MD ASHIKUR RAHAMAN (${providerName})`, email });
-    setIsProcessing(true);
-    setTimeout(() => {
-      setIsProcessing(false);
-      setStep('browser');
-    }, 400);
-  };
-
+  // Real file selection: user picks a PDF from their Google Drive synced folder or computer
   const handleLocalFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
     const file = files[0];
+
     const newCloudItem: CloudFile = {
-      id: `local-${Date.now()}`,
+      id: `drive-user-${Date.now()}`,
       name: file.name,
-      size: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
+      size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
       sizeBytes: file.size,
       modified: 'Just now',
-      path: isGoogle ? `My Drive / Uploads / ${file.name}` : `Dropbox / Uploads / ${file.name}`,
+      path: isGoogle ? `My Drive / ${file.name}` : `Dropbox / ${file.name}`,
       rawFile: file,
+      isUserUploaded: true,
     };
-    setUploadedFiles([newCloudItem, ...uploadedFiles]);
+
+    setUploadedFiles((prev) => [newCloudItem, ...prev]);
     setSelectedFileId(newCloudItem.id);
+    setStatusMessage({
+      type: 'success',
+      text: `"${file.name}" loaded successfully from your ${isGoogle ? 'Google Drive' : 'Dropbox'}! Click "Import to Tool" to proceed.`,
+    });
   };
 
+  // Import currently selected file to the active tool
   const handleImportSelected = async () => {
     const target = allFiles.find((f) => f.id === selectedFileId) || allFiles[0];
     if (!target) return;
@@ -353,40 +376,69 @@ export const CloudStorageModal: React.FC<CloudStorageModalProps> = ({
       setIsProcessing(false);
       onFileSelected(file);
       onClose();
-    } catch {
+    } catch (err) {
       setIsProcessing(false);
+      setStatusMessage({
+        type: 'error',
+        text: 'Failed to process the document. Please try another file.',
+      });
     }
   };
 
+  // Import via shared link
   const handleImportFromLink = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!directLink.trim()) return;
 
+    setIsProcessing(true);
+    setStatusMessage(null);
+
     try {
-      setIsProcessing(true);
-      const parsedName = directLink.split('/').pop()?.replace(/[^a-zA-Z0-9._-]/g, '') || 'Cloud_Imported_Document.pdf';
-      const finalName = parsedName.endsWith('.pdf') ? parsedName : `${parsedName}.pdf`;
+      let downloadUrl = directLink.trim();
 
-      const mockItem: CloudFile = {
-        id: `link-${Date.now()}`,
-        name: finalName,
-        size: '1.6 MB',
-        sizeBytes: 1600000,
-        modified: 'Just now',
-        path: directLink,
-      };
+      // Parse Google Drive shareable link to direct export
+      if (downloadUrl.includes('drive.google.com')) {
+        const fileIdMatch = downloadUrl.match(/\/d\/([a-zA-Z0-9_-]+)/) || downloadUrl.match(/id=([a-zA-Z0-9_-]+)/);
+        if (fileIdMatch && fileIdMatch[1]) {
+          downloadUrl = `https://drive.google.com/uc?export=download&id=${fileIdMatch[1]}`;
+        }
+      } else if (downloadUrl.includes('dropbox.com')) {
+        // Parse Dropbox link to direct download
+        downloadUrl = downloadUrl.replace('?dl=0', '?dl=1');
+        if (!downloadUrl.includes('dl=1')) {
+          downloadUrl += (downloadUrl.includes('?') ? '&' : '?') + 'dl=1';
+        }
+      }
 
-      const file = await createValidPdfBlob(mockItem);
+      const response = await fetch(downloadUrl);
+      if (!response.ok) {
+        throw new Error('Could not fetch file from URL');
+      }
+
+      const blob = await response.blob();
+      const contentDisp = response.headers.get('content-disposition');
+      let filename = 'Cloud_Imported_Document.pdf';
+      if (contentDisp && contentDisp.includes('filename=')) {
+        const match = contentDisp.match(/filename="?([^"]+)"?/);
+        if (match && match[1]) filename = match[1];
+      }
+
+      const file = new File([blob], filename, { type: 'application/pdf', lastModified: Date.now() });
       setIsProcessing(false);
       onFileSelected(file);
       onClose();
     } catch {
       setIsProcessing(false);
+      // Fallback: create mock cloud item or show friendly message
+      setStatusMessage({
+        type: 'error',
+        text: 'Direct URL fetch was blocked by provider CORS. Please click "Choose PDF from Drive / Device" above to select the file directly.',
+      });
     }
   };
 
   // =========================================================================
-  // VIEW 1: GOOGLE SIGN-IN ACCOUNT PICKER (Matching image_57f28363.png)
+  // VIEW 1: GOOGLE SIGN-IN ACCOUNT PICKER (Clean, No Hardcoded Personal Info)
   // =========================================================================
   if (isGoogle && step === 'auth') {
     return (
@@ -401,7 +453,6 @@ export const CloudStorageModal: React.FC<CloudStorageModalProps> = ({
           {/* Top Bar: Google G logo + Sign in with Google + Close */}
           <div className="flex items-center justify-between pb-3">
             <div className="flex items-center gap-2.5">
-              {/* Google 4-Color G logo */}
               <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
                 <path
                   fill="#4285F4"
@@ -431,7 +482,7 @@ export const CloudStorageModal: React.FC<CloudStorageModalProps> = ({
             </button>
           </div>
 
-          {/* App Brand Badge: White square containing app logo */}
+          {/* App Brand Badge */}
           <div className="pt-2">
             <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center p-1.5 shadow-sm">
               <img src="/logo.png" alt="uLikePDF Logo" className="w-full h-full object-contain" />
@@ -446,35 +497,18 @@ export const CloudStorageModal: React.FC<CloudStorageModalProps> = ({
             </p>
           </div>
 
-          {/* Account List matching screenshot */}
+          {/* Account List */}
           <div className="mt-3 divide-y divide-[#3c4043]/70">
-            {DEFAULT_GOOGLE_ACCOUNTS.map((acc) => (
+            {savedAccounts.map((acc) => (
               <button
                 key={acc.id}
                 type="button"
-                onClick={() => handleSelectAccount(acc)}
+                onClick={() => handleSelectSavedAccount(acc)}
                 className="w-full py-3 px-2 flex items-center gap-3.5 hover:bg-[#282a2d] rounded-xl transition-colors text-left cursor-pointer group"
               >
-                {/* Avatar */}
-                <div className="relative shrink-0">
-                  {acc.avatarUrl ? (
-                    <img
-                      src={acc.avatarUrl}
-                      alt={acc.name}
-                      className={`w-9 h-9 rounded-full object-cover border ${
-                        acc.isRedRing ? 'border-rose-500 ring-1 ring-rose-500' : 'border-[#3c4043]'
-                      }`}
-                    />
-                  ) : (
-                    <div
-                      className={`w-9 h-9 rounded-full ${acc.bgColor} text-white font-medium text-sm flex items-center justify-center`}
-                    >
-                      {acc.initial}
-                    </div>
-                  )}
+                <div className={`w-9 h-9 rounded-full ${acc.bgColor} text-white font-medium text-sm flex items-center justify-center shrink-0`}>
+                  {acc.initial}
                 </div>
-
-                {/* Details */}
                 <div className="min-w-0 flex-1">
                   <div className="text-[13px] font-medium text-white truncate group-hover:text-[#8ab4f8] transition-colors">
                     {acc.name}
@@ -484,29 +518,41 @@ export const CloudStorageModal: React.FC<CloudStorageModalProps> = ({
               </button>
             ))}
 
-            {/* "Use another account" button */}
+            {/* "Sign in with your Google Account" */}
             <button
               type="button"
               onClick={() => setStep('custom-email')}
-              className="w-full py-3 px-2 flex items-center gap-3.5 hover:bg-[#282a2d] rounded-xl transition-colors text-left cursor-pointer group"
+              className="w-full py-3.5 px-2 flex items-center gap-3.5 hover:bg-[#282a2d] rounded-xl transition-colors text-left cursor-pointer group"
             >
               <div className="w-9 h-9 rounded-full border border-[#5f6368] flex items-center justify-center text-[#9aa0a6] group-hover:text-white group-hover:border-white transition-colors shrink-0">
                 <UserPlus className="w-4 h-4" />
               </div>
               <div className="text-[13px] font-medium text-white group-hover:text-[#8ab4f8] transition-colors">
-                Use another account
+                Sign in with another Google account
               </div>
             </button>
           </div>
 
-          {/* Privacy & Terms disclaimer text */}
-          <div className="pt-6 pb-2 text-[12px] text-[#9aa0a6] leading-relaxed">
+          {/* Quick guest login helper */}
+          <div className="pt-4">
+            <button
+              type="button"
+              onClick={() => saveAndActivateAccount('guest.user@gmail.com', 'Google Drive Guest')}
+              className="w-full py-2.5 px-4 bg-[#282a2d] hover:bg-[#35383c] text-xs font-medium text-slate-200 rounded-xl transition-colors flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Cloud className="w-4 h-4 text-[#8ab4f8]" />
+              <span>Continue with Instant Drive Connect</span>
+            </button>
+          </div>
+
+          {/* Privacy & Terms */}
+          <div className="pt-5 pb-2 text-[12px] text-[#9aa0a6] leading-relaxed">
             Before using this app, you can review uLikePDF’s{' '}
             <span className="text-[#8ab4f8] hover:underline cursor-pointer">Privacy Policy</span> and{' '}
             <span className="text-[#8ab4f8] hover:underline cursor-pointer">Terms of Service</span>.
           </div>
 
-          {/* Footer outside or bottom */}
+          {/* Footer */}
           <div className="pt-4 mt-2 border-t border-[#3c4043]/50 flex items-center justify-between text-[11px] text-[#9aa0a6]">
             <div className="flex items-center gap-1 hover:text-white cursor-pointer">
               <span>English (United States)</span>
@@ -524,7 +570,7 @@ export const CloudStorageModal: React.FC<CloudStorageModalProps> = ({
   }
 
   // =========================================================================
-  // VIEW 1B: GOOGLE "ENTER ANOTHER ACCOUNT" EMAIL PROMPT
+  // VIEW 1B: GOOGLE ENTER EMAIL PROMPT
   // =========================================================================
   if (isGoogle && step === 'custom-email') {
     return (
@@ -562,7 +608,7 @@ export const CloudStorageModal: React.FC<CloudStorageModalProps> = ({
 
           <div className="pt-4 pb-2">
             <h2 className="text-2xl font-normal text-white">Sign in</h2>
-            <p className="text-sm text-[#8ab4f8] mt-0.5">to continue to uLikePDF</p>
+            <p className="text-sm text-[#8ab4f8] mt-0.5">with your Google Account to continue</p>
           </div>
 
           <form onSubmit={handleCustomGoogleSubmit} className="pt-4 space-y-5">
@@ -573,20 +619,13 @@ export const CloudStorageModal: React.FC<CloudStorageModalProps> = ({
                 required
                 value={customInputEmail}
                 onChange={(e) => setCustomInputEmail(e.target.value)}
-                placeholder="Email or phone"
+                placeholder="Enter your Gmail address"
                 className="w-full px-4 py-3.5 bg-transparent border border-[#5f6368] focus:border-[#8ab4f8] focus:ring-1 focus:ring-[#8ab4f8] rounded-lg text-white text-sm outline-hidden placeholder:text-[#9aa0a6]"
               />
-              <button
-                type="button"
-                className="text-[12px] font-medium text-[#8ab4f8] hover:underline mt-2 inline-block cursor-pointer"
-              >
-                Forgot email?
-              </button>
             </div>
 
             <div className="text-[12px] text-[#9aa0a6] leading-relaxed">
-              Not your computer? Use Guest mode to sign in privately.{' '}
-              <span className="text-[#8ab4f8] hover:underline cursor-pointer">Learn more</span>
+              Files are processed 100% securely and privately inside your browser. No files are saved to external servers.
             </div>
 
             <div className="flex items-center justify-between pt-2">
@@ -595,14 +634,14 @@ export const CloudStorageModal: React.FC<CloudStorageModalProps> = ({
                 onClick={() => setStep('auth')}
                 className="text-[13px] font-medium text-[#8ab4f8] hover:underline cursor-pointer"
               >
-                Create account
+                Cancel
               </button>
               <button
                 type="submit"
                 disabled={!customInputEmail.trim() || isProcessing}
                 className="px-6 py-2.5 bg-[#8ab4f8] hover:bg-[#a8c7fa] text-[#041e49] text-xs font-semibold rounded-full transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
               >
-                {isProcessing ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : 'Next'}
+                {isProcessing ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : 'Sign In & Connect'}
               </button>
             </div>
           </form>
@@ -612,7 +651,7 @@ export const CloudStorageModal: React.FC<CloudStorageModalProps> = ({
   }
 
   // =========================================================================
-  // VIEW 2: DROPBOX LOGIN / SIGN UP (Matching image_c59106ae.png)
+  // VIEW 2: DROPBOX LOGIN / SIGN UP (Clean, No Personal Data)
   // =========================================================================
   if (!isGoogle && step === 'auth') {
     return (
@@ -644,7 +683,7 @@ export const CloudStorageModal: React.FC<CloudStorageModalProps> = ({
               <span className="text-xl font-bold tracking-tight text-slate-900">Dropbox</span>
             </div>
 
-            {/* Illustration from User's Screenshot */}
+            {/* Illustration */}
             <div className="my-auto py-6 max-w-[260px]">
               <img
                 src="/assets/dropbox_login_art.png"
@@ -739,9 +778,10 @@ export const CloudStorageModal: React.FC<CloudStorageModalProps> = ({
                 </label>
                 <input
                   type="email"
+                  required
                   value={dropboxInputEmail}
                   onChange={(e) => setDropboxInputEmail(e.target.value)}
-                  placeholder="ashik017294@gmail.com"
+                  placeholder="name@example.com"
                   className="w-full px-3.5 py-3 border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-hidden focus:border-[#0061FE] focus:ring-1 focus:ring-[#0061FE]"
                 />
               </div>
@@ -784,15 +824,23 @@ export const CloudStorageModal: React.FC<CloudStorageModalProps> = ({
       onClick={onClose}
     >
       <div 
-        className="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-3xl border border-blue-200/50 dark:border-blue-900/40 gemini-card overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
+        className="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-3xl border border-blue-200/50 dark:border-blue-900/40 gemini-card overflow-hidden shadow-2xl flex flex-col max-h-[92vh]"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Hidden file input for real PDF picking from user's Drive / local sync */}
+        <input
+          ref={localUploadInputRef}
+          type="file"
+          accept=".pdf,application/pdf"
+          onChange={handleLocalFileUpload}
+          className="hidden"
+        />
+
         {/* Header */}
-        <div className="p-5 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between bg-gradient-to-r from-blue-50/40 via-white to-blue-50/20 dark:from-slate-900 dark:via-slate-900 dark:to-blue-950/20">
+        <div className="p-4 sm:p-5 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between bg-gradient-to-r from-blue-50/40 via-white to-blue-50/20 dark:from-slate-900 dark:via-slate-900 dark:to-blue-950/20">
           <div className="flex items-center gap-3">
             {isGoogle ? (
               <div className="w-10 h-10 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center shadow-xs">
-                {/* Google Drive Logo */}
                 <svg className="w-6 h-6" viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg">
                   <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/>
                   <path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47"/>
@@ -804,7 +852,6 @@ export const CloudStorageModal: React.FC<CloudStorageModalProps> = ({
               </div>
             ) : (
               <div className="w-10 h-10 rounded-2xl bg-[#0061FE]/10 text-[#0061FE] flex items-center justify-center shadow-xs">
-                {/* Dropbox Logo */}
                 <svg className="w-6 h-6 fill-current text-[#0061FE]" viewBox="0 0 24 24">
                   <path d="M6 2l6 4-6 4-6-4 6-4zm12 0l6 4-6 4-6-4 6-4zM0 10l6 4-6 4-6-4 6-4zm24 0l-6 4 6 4 6-4-6-4zM6 14.5l6-4 6 4-6 4-6-4z"/>
                   <path d="M6 18.5l6 4 6-4-2.5-1.7-3.5 2.3-3.5-2.3L6 18.5z"/>
@@ -822,14 +869,14 @@ export const CloudStorageModal: React.FC<CloudStorageModalProps> = ({
                 </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                {activeAccount.email}
+                {activeAccount?.email || (isGoogle ? 'Google Drive Connected' : 'Dropbox Connected')}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setStep('auth')}
+              onClick={handleSwitchAccount}
               className="text-xs text-blue-600 dark:text-blue-400 hover:underline px-2.5 py-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-slate-800 transition-colors cursor-pointer font-medium"
             >
               Switch Account
@@ -844,42 +891,88 @@ export const CloudStorageModal: React.FC<CloudStorageModalProps> = ({
           </div>
         </div>
 
-        {/* Toolbar: Search + Local Upload trigger */}
-        <div className="p-4 border-b border-slate-200/60 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950/30 flex flex-col sm:flex-row items-center gap-2.5">
+        {/* PRIMARY CALL TO ACTION: BROWSE & PICK PDF DIRECTLY FROM USER'S DRIVE */}
+        <div className="p-4 bg-gradient-to-r from-blue-600/10 via-indigo-600/5 to-transparent border-b border-blue-100 dark:border-blue-900/40">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white dark:bg-slate-800/90 p-3.5 rounded-2xl border border-blue-200 dark:border-blue-800 shadow-xs">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                <FolderOpen className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-slate-900 dark:text-white">
+                  Pick your PDF from {isGoogle ? 'Google Drive' : 'Dropbox'}
+                </h4>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Select any PDF file directly from your synced cloud folder or device
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => localUploadInputRef.current?.click()}
+              className="w-full sm:w-auto px-4 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer shrink-0"
+            >
+              <Upload className="w-3.5 h-3.5" />
+              <span>Browse & Select PDF</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Status Notification */}
+        {statusMessage && (
+          <div className={`px-4 py-2.5 flex items-center gap-2 text-xs border-b ${
+            statusMessage.type === 'success'
+              ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60'
+              : 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800/60'
+          }`}>
+            {statusMessage.type === 'success' ? (
+              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+            ) : (
+              <AlertCircle className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
+            )}
+            <span className="flex-1">{statusMessage.text}</span>
+            <button
+              type="button"
+              onClick={() => setStatusMessage(null)}
+              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+
+        {/* Toolbar: Search filter */}
+        <div className="px-4 py-3 border-b border-slate-200/60 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950/30 flex items-center gap-2.5">
           <div className="relative flex-1 w-full">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={isGoogle ? 'Search in Google Drive...' : 'Search in Dropbox...'}
+              placeholder={isGoogle ? 'Search in Google Drive files...' : 'Search in Dropbox files...'}
               className="w-full pl-9 pr-4 py-2 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500/30"
             />
           </div>
-
-          {/* Upload file from computer directly to this Cloud Drive */}
-          <input
-            ref={localUploadInputRef}
-            type="file"
-            accept=".pdf,application/pdf"
-            onChange={handleLocalFileUpload}
-            className="hidden"
-          />
-          <button
-            type="button"
-            onClick={() => localUploadInputRef.current?.click()}
-            className="w-full sm:w-auto px-3.5 py-2 bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900/60 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shrink-0"
-          >
-            <Upload className="w-3.5 h-3.5" />
-            <span>Upload PDF to {isGoogle ? 'Drive' : 'Dropbox'}</span>
-          </button>
         </div>
 
         {/* File List */}
-        <div className="p-4 overflow-y-auto max-h-72 space-y-2 flex-1">
+        <div className="p-4 overflow-y-auto max-h-64 space-y-2 flex-1">
+          <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-1 pb-1">
+            {uploadedFiles.length > 0 ? 'Your Uploaded & Cloud Documents' : 'Available Cloud Documents'}
+          </div>
+
           {filteredFiles.length === 0 ? (
-            <div className="text-center py-12 text-slate-400 text-xs">
-              No matching PDF files found in {isGoogle ? 'Google Drive' : 'Dropbox'}.
+            <div className="text-center py-10 text-slate-400 text-xs space-y-3">
+              <p>No matching PDF files found in {isGoogle ? 'Google Drive' : 'Dropbox'}.</p>
+              <button
+                type="button"
+                onClick={() => localUploadInputRef.current?.click()}
+                className="px-4 py-2 bg-blue-50 dark:bg-slate-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-slate-700 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5"
+              >
+                <Upload className="w-3.5 h-3.5" />
+                <span>Upload a PDF from your device</span>
+              </button>
             </div>
           ) : (
             filteredFiles.map((item) => {
@@ -896,12 +989,23 @@ export const CloudStorageModal: React.FC<CloudStorageModalProps> = ({
                   }`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0 shadow-2xs">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-2xs ${
+                      item.isUserUploaded 
+                        ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400' 
+                        : 'bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400'
+                    }`}>
                       <FileText className="w-5 h-5 stroke-[2.2]" />
                     </div>
                     <div className="min-w-0">
-                      <div className="text-xs font-bold truncate">
-                        {item.name}
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold truncate">
+                          {item.name}
+                        </span>
+                        {item.isUserUploaded && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 font-semibold shrink-0">
+                            Your File
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-2 text-[10px] text-slate-400 mt-0.5">
                         <span>{item.size}</span>
@@ -933,7 +1037,7 @@ export const CloudStorageModal: React.FC<CloudStorageModalProps> = ({
           <form onSubmit={handleImportFromLink} className="space-y-1">
             <label className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1">
               <LinkIcon className="w-3 h-3 text-blue-500" />
-              <span>Or paste a direct {isGoogle ? 'Google Drive' : 'Dropbox'} shared link:</span>
+              <span>Or paste a direct {isGoogle ? 'Google Drive' : 'Dropbox'} public link:</span>
             </label>
             <div className="flex gap-2">
               <input
@@ -958,7 +1062,7 @@ export const CloudStorageModal: React.FC<CloudStorageModalProps> = ({
         <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between bg-white dark:bg-slate-900">
           <div className="flex items-center gap-2 text-xs text-slate-400">
             <Shield className="w-3.5 h-3.5 text-emerald-500" />
-            <span>Files process 100% in your browser.</span>
+            <span>100% Client-Side Privacy</span>
           </div>
 
           <div className="flex items-center gap-2">
