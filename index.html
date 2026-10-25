@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      // Polyfill/guard window.fetch to ensure it has both a getter and setter.
+      // Resolves "TypeError: Cannot set property fetch of #<Window> which has only a getter"
+      // when browser extensions (Frame Ant, ad blockers, security tools) attempt to wrap window.fetch.
+      (function() {
+        try {
+          var _origFetch = window.fetch;
+          var _currentFetch = _origFetch ? _origFetch.bind(window) : undefined;
+          var propDesc = {
+            configurable: true,
+            enumerable: true,
+            get: function() {
+              return _currentFetch;
+            },
+            set: function(val) {
+              _currentFetch = val;
+            }
+          };
+          try {
+            Object.defineProperty(window, 'fetch', propDesc);
+          } catch (_) {}
+          if (typeof Window !== 'undefined' && Window.prototype) {
+            try {
+              Object.defineProperty(Window.prototype, 'fetch', propDesc);
+            } catch (_) {}
+          }
+        } catch (_) {}
+
+        // Suppress unhandled errors originating from external browser extensions
+        try {
+          window.addEventListener('error', function(event) {
+            var src = (event && (event.filename || (event.error && event.error.stack))) || '';
+            if (typeof src === 'string' && (
+              src.indexOf('chrome-extension://') !== -1 ||
+              src.indexOf('moz-extension://') !== -1 ||
+              src.indexOf('safari-extension://') !== -1
+            )) {
+              if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+              if (event.preventDefault) event.preventDefault();
+            }
+          }, true);
+
+          window.addEventListener('unhandledrejection', function(event) {
+            var reason = event && event.reason;
+            var src = (reason && (reason.stack || reason.message)) || '';
+            if (typeof src === 'string' && (
+              src.indexOf('chrome-extension://') !== -1 ||
+              src.indexOf('moz-extension://') !== -1 ||
+              src.indexOf('safari-extension://') !== -1
+            )) {
+              if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+              if (event.preventDefault) event.preventDefault();
+            }
+          }, true);
+        } catch (_) {}
+      })();
+    </script>
+    <title>uLikePDF – Free Online PDF Tools | ulikepdf.com</title>
+    <meta name="description" content="Free online PDF tools on ulikepdf.com. Merge, split, compress, convert, rotate, protect, and edit PDF documents safely inside your browser without uploading to servers." />
+    <link rel="canonical" href="https://ulikepdf.com/" />
+    <meta name="keywords" content="pdf tools, merge pdf, split pdf, compress pdf, convert pdf to word, pdf to jpg, sign pdf, watermark pdf, protect pdf, bates numbering, flatten pdf, deskew pdf, ocr pdf, ilovepdf alternative, sejda alternative, ulikepdf, ফ্রি পিডিএফ টুলস, পিডিএফ মার্জ, পিডিএফ কম্প্রেস, unir pdf, comprimir pdf, fusionner pdf" />
+
+    <!-- Multilingual SEO Hreflang Tags (25 Supported Global Languages) -->
+    <link rel="alternate" hreflang="x-default" href="https://ulikepdf.com/" />
+    <link rel="alternate" hreflang="en" href="https://ulikepdf.com/" />
+    <link rel="alternate" hreflang="bn" href="https://ulikepdf.com/?lang=bn" />
+    <link rel="alternate" hreflang="es" href="https://ulikepdf.com/?lang=es" />
+    <link rel="alternate" hreflang="fr" href="https://ulikepdf.com/?lang=fr" />
+    <link rel="alternate" hreflang="de" href="https://ulikepdf.com/?lang=de" />
+    <link rel="alternate" hreflang="it" href="https://ulikepdf.com/?lang=it" />
+    <link rel="alternate" hreflang="pt" href="https://ulikepdf.com/?lang=pt" />
+    <link rel="alternate" hreflang="ja" href="https://ulikepdf.com/?lang=ja" />
+    <link rel="alternate" hreflang="ru" href="https://ulikepdf.com/?lang=ru" />
+    <link rel="alternate" hreflang="ko" href="https://ulikepdf.com/?lang=ko" />
+    <link rel="alternate" hreflang="zh-CN" href="https://ulikepdf.com/?lang=zh-CN" />
+    <link rel="alternate" hreflang="zh-TW" href="https://ulikepdf.com/?lang=zh-TW" />
+    <link rel="alternate" hreflang="ar" href="https://ulikepdf.com/?lang=ar" />
+    <link rel="alternate" hreflang="bg" href="https://ulikepdf.com/?lang=bg" />
+    <link rel="alternate" hreflang="ca" href="https://ulikepdf.com/?lang=ca" />
+    <link rel="alternate" hreflang="nl" href="https://ulikepdf.com/?lang=nl" />
+    <link rel="alternate" hreflang="el" href="https://ulikepdf.com/?lang=el" />
+    <link rel="alternate" hreflang="hi" href="https://ulikepdf.com/?lang=hi" />
+    <link rel="alternate" hreflang="id" href="https://ulikepdf.com/?lang=id" />
+    <link rel="alternate" hreflang="ms" href="https://ulikepdf.com/?lang=ms" />
+    <link rel="alternate" hreflang="pl" href="https://ulikepdf.com/?lang=pl" />
+    <link rel="alternate" hreflang="sv" href="https://ulikepdf.com/?lang=sv" />
+    <link rel="alternate" hreflang="th" href="https://ulikepdf.com/?lang=th" />
+    <link rel="alternate" hreflang="tr" href="https://ulikepdf.com/?lang=tr" />
+    <link rel="alternate" hreflang="uk" href="https://ulikepdf.com/?lang=uk" />
+    
+    <!-- OpenGraph Metadata -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="uLikePDF" />
+    <meta property="og:url" content="https://ulikepdf.com/" />
+    <meta property="og:title" content="uLikePDF – Free Online PDF Tools to Merge, Split, Compress & Convert" />
+    <meta property="og:description" content="100% private client-side PDF tools on ulikepdf.com to merge, split, compress, convert, rotate, and manage PDF documents right in your browser." />
+    <meta property="og:image" content="https://ulikepdf.com/logo.png" />
+    
+    <!-- Twitter Metadata -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="uLikePDF – Free Online PDF Tools | ulikepdf.com" />
+    <meta name="twitter:description" content="100% private client-side PDF tools on ulikepdf.com to merge, split, compress, convert, rotate, and manage PDF documents right in your browser." />
+    <meta name="twitter:image" content="https://ulikepdf.com/logo.png" />
+
+    <!-- Preconnect & Preload Fonts for Fast Loading (Under milliseconds) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preload" href="/fonts/solaimanlipi.woff2" as="font" type="font/woff2" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Hind:wght@400;500;600;700&family=Hind+Siliguri:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=Lato:wght@400;700&family=Noto+Sans+Bengali:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&family=Noto+Sans+KR:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Sans+TC:wght@400;500;700&family=Roboto:wght@400;500;700&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Schema.org Comprehensive Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebApplication",
+          "@id": "https://ulikepdf.com/#webapp",
+          "name": "uLikePDF",
+          "url": "https://ulikepdf.com",
+          "applicationCategory": "UtilitiesApplication",
+          "operatingSystem": "All",
+          "inLanguage": ["en", "bn", "es", "fr", "de", "it", "pt", "ja", "ru", "ko", "zh-CN", "zh-TW", "ar", "bg", "ca", "nl", "el", "hi", "id", "ms", "pl", "sv", "th", "tr", "uk"],
+          "description": "Fast, private client-side PDF toolkit on ulikepdf.com to merge, split, compress, convert, organize, and edit PDF files in the browser without server uploads.",
+          "browserRequirements": "Requires JavaScript. Requires HTML5.",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+          },
+          "featureList": [
+            "Merge PDF files locally",
+            "Split PDF pages and bookmarks",
+            "Compress PDF with smart image resampling",
+            "Convert PDF to Word, Excel, PowerPoint, JPG",
+            "Visual PDF annotation and whiteout redaction",
+            "Bates numbering and legal exhibit stamp",
+            "Flatten and lock AcroForms",
+            "Google Drive and Dropbox cloud import"
+          ]
+        },
+        {
+          "@type": "Organization",
+          "@id": "https://ulikepdf.com/#organization",
+          "name": "uLikePDF",
+          "url": "https://ulikepdf.com",
+          "logo": "https://ulikepdf.com/logo.png"
+        }
+      ]
+    }
+    </script>
+    <link rel="icon" type="image/png" href="/logo.png" />
+    <link rel="apple-touch-icon" href="/logo.png" />
+  </head>
+  <body class="bg-slate-50 text-slate-900 antialiased selection:bg-blue-600 selection:text-white transition-colors duration-150">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
