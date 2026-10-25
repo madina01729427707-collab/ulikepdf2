@@ -12,15 +12,15 @@ interface SEOConfig {
 
 const SEO_DATA: Record<SupportedLanguage, SEOConfig> = {
   bn: {
-    title: 'uLikePDF – ফ্রি অনলাইন PDF টুলস | মার্জ, স্প্লিট, কম্প্রেস ও এডিট করুন',
-    description: '১০০% নিরাপদ ও সম্পূর্ণ ফ্রি অনলাইন পিডিএফ টুলস। কোনো সফটওয়্যার ছাড়াই ব্রাউজারে পিডিএফ মার্জ, স্প্লিট, সাইজ ছোট (কম্প্রেস), কনভার্ট, এডিট, পেজ নম্বর ও সাইন করুন।',
-    keywords: 'পিডিএফ মার্জ, পিডিএফ কম্প্রেস, পিডিএফ কনভার্ট, ফ্রি পিডিএফ টুলস, অনলাইন পিডিএফ এডিটর, পিডিএফ সাইজ কমানো, পিডিএফ ওয়ার্ড কনভার্টার, ulikepdf, ilovepdf বিকল্প',
+    title: 'uLikePDF – ফ্রি অনলাইন PDF টুলস | সেরা iLovePDF বিকল্প (ulikepdf.com)',
+    description: 'uLikePDF হলো ১০০% নিরাপদ ও সম্পূর্ণ ফ্রি অনলাইন পিডিএফ টুলস এবং সেরা iLovePDF বিকল্প। ফাইল সার্ভারে আপলোড ছাড়াই ব্রাউজারে পিডিএফ মার্জ, কম্প্রেস, কনভার্ট ও এডিট করুন।',
+    keywords: 'ulikepdf, ulikepdf.com, ilovepdf, ilovepdf বিকল্প, ফ্রি পিডিএফ টুলস, পিডিএফ মার্জ, পিডিএফ কম্প্রেস, পিডিএফ কনভার্টার, অনলাইন পিডিএফ এডিটর, merge pdf, compress pdf',
     locale: 'bn_BD',
   },
   en: {
-    title: 'uLikePDF – Free Online PDF Tools to Merge, Split, Compress & Edit',
-    description: '100% private, free client-side PDF tools. Merge, split, compress, convert, edit, sign, and protect PDF files directly in your browser with zero server uploads.',
-    keywords: 'pdf tools, merge pdf, split pdf, compress pdf, convert pdf to word, pdf editor online free, ilovepdf alternative, sejda alternative, ulikepdf.com',
+    title: 'uLikePDF – Free Online PDF Tools | Best iLovePDF Alternative',
+    description: 'uLikePDF is the best free, 100% private online PDF toolkit and iLovePDF alternative. Merge, split, compress, convert, organize, and edit PDFs in your browser with zero server uploads.',
+    keywords: 'ulikepdf, ulikepdf.com, ilovepdf, ilovepdf alternative, free pdf tools, merge pdf, split pdf, compress pdf, convert pdf to word, pdf editor online free, organize pdf pages',
     locale: 'en_US',
   },
   es: {

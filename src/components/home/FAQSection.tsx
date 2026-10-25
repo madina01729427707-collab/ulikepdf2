@@ -26,6 +26,10 @@ export const FAQSection: React.FC = () => {
     {
       question: t('faq.q5', 'Is uLikePDF free for commercial and personal use?'),
       answer: t('faq.a5', 'Yes, uLikePDF is completely free. There are no paywalls, hidden subscription charges, or watermarks added to your exported files.')
+    },
+    {
+      question: t('faq.q6', 'How is uLikePDF different from iLovePDF or other online PDF services?'),
+      answer: t('faq.a6', 'Unlike traditional cloud converters such as iLovePDF or Adobe Acrobat online where your files are sent to remote servers, uLikePDF runs 100% locally in your web browser. This means your personal, business, and financial documents remain completely confidential, processing is instantaneous with no upload delays, and there are no annoying daily quotas or subscriptions.')
     }
   ];
 

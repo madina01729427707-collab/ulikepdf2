@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, ArrowRight, ShieldCheck, Zap, Lock } from 'lucide-react';
+import { Search, ArrowRight, ShieldCheck, Zap, Lock, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { ALL_TOOLS } from '../../config/tools';
 import { useLanguage } from '../../context/LanguageContext';
@@ -11,7 +11,8 @@ interface HeroProps {
 export const Hero: React.FC<HeroProps> = ({ onSearchChange }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const isBn = language === 'bn';
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,8 +38,18 @@ export const Hero: React.FC<HeroProps> = ({ onSearchChange }) => {
       <div className="absolute inset-0 bg-radial from-blue-50/50 via-transparent to-transparent dark:from-blue-950/20 pointer-events-none" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-        <div className="text-center max-w-3xl mx-auto space-y-6">
+        <div className="text-center max-w-3xl mx-auto space-y-5">
           
+          {/* SEO Brand & Target Keyword Badge */}
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-semibold bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200/80 dark:border-blue-800/80 shadow-2xs">
+            <Sparkles className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+            <span>
+              {isBn 
+                ? 'uLikePDF – সেরা ফ্রি iLovePDF বিকল্প ও নিরাপদ PDF টুলস'
+                : 'uLikePDF – The #1 Free iLovePDF Alternative'}
+            </span>
+          </div>
+
           {/* Main Headline */}
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 dark:text-white" style={{ textWrap: 'balance' }}>
             {t('hero.headline', 'All Your PDF Tools in One Place')}
